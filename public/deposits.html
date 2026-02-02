@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposits - Yono777</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .upload-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .file-input-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+        
+        .file-input-label:hover {
+            transform: scale(1.05);
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-name {
+            display: inline-block;
+            margin-left: 10px;
+            color: #666;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .table-section {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th {
+            background: #f0f0f0;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .status.pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .status.failed {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .message {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+        
+        .message.error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Deposits Management</h1>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/deposits">Deposits</a>
+                <a href="/withdrawals">Withdrawals</a>
+            </div>
+        </header>
+        
+        <div id="message"></div>
+        
+        <div class="upload-section">
+            <h3>📤 Import Deposits</h3>
+            <p style="color: #666; margin: 10px 0; font-size: 14px;">Upload Excel file (XLSX, XLS, CSV)</p>
+            <label class="file-input-label">
+                Choose File
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+            </label>
+            <span class="file-name" id="fileName"></span>
+            <button id="uploadBtn" onclick="uploadFile()">Upload & Import</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+        
+        <div class="table-section">
+            <h3 style="margin-bottom: 15px;">📊 Recent Deposits</h3>
+            <table id="depositsTable">
+                <thead>
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #999;">Loading deposits...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const messageDiv = document.getElementById('message');
+        const loading = document.getElementById('loading');
+        
+        fileInput.addEventListener('change', (e) => {
+            fileName.textContent = e.target.files[0] ? `Selected: ${e.target.files[0].name}` : '';
+        });
+        
+        async function uploadFile() {
+            if (!fileInput.files[0]) {
+                showMessage('Please select a file', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            loading.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(`✓ Successfully imported ${data.imported} deposits!`, 'success');
+                    fileInput.value = '';
+                    fileName.textContent = '';
+                    loadDeposits();
+                } else {
+                    showMessage(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Upload failed: ${error.message}`, 'error');
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        async function loadDeposits() {
+            try {
+                const response = await fetch('/api/deposits');
+                const deposits = await response.json();
+                
+                const tbody = document.getElementById('tableBody');
+                if (deposits.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No deposits yet</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = deposits.map(d => `
+                    <tr>
+                        <td>${d.orderNumber || '-'}</td>
+                        <td>$${(d.amount || 0).toFixed(2)}</td>
+                        <td><span class="status success">${d.paymentStatus || 'Completed'}</span></td>
+                        <td>${d.importDate || '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load deposits:', error);
+            }
+        }
+        
+        function showMessage(text, type) {
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            setTimeout(() => {
+                messageDiv.className = '';
+                messageDiv.textContent = '';
+            }, 5000);
+        }
+        
+        // Load deposits on page load
+        loadDeposits();
+    </script>
+</body>
+</html>
