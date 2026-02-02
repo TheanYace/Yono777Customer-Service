@@ -372,6 +372,15 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
+// Health check route
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        publicDir: path.join(__dirname, 'public')
+    });
+});
+
 // Temporary debug endpoint to inspect deposits in DB
 app.get('/debug/deposits', (req, res) => {
     dbHelpers.getAllDeposits((err, deposits) => {
@@ -2012,12 +2021,57 @@ app.post('/api/upload-uid-files', upload.array('files', 10), async (req, res) =>
 
 // Serve main page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    const filePath = path.join(__dirname, 'public', 'index.html');
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error serving index.html:', err);
+            res.status(500).json({ error: 'Could not serve index.html', details: err.message });
+        }
+    });
 });
 
 // Serve deposits page
 app.get('/deposits', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'deposits.html'));
+    const filePath = path.join(__dirname, 'public', 'deposits.html');
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error serving deposits.html:', err);
+            res.status(500).json({ error: 'Could not serve deposits.html', details: err.message });
+        }
+    });
+});
+
+// Serve chat page
+app.get('/chat', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'chat.html');
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error serving chat.html:', err);
+            res.status(500).json({ error: 'Could not serve chat.html', details: err.message });
+        }
+    });
+});
+
+// Serve admin page
+app.get('/admin', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'admin.html');
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error serving admin.html:', err);
+            res.status(500).json({ error: 'Could not serve admin.html', details: err.message });
+        }
+    });
+});
+
+// Serve withdrawals page
+app.get('/withdrawals', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'withdrawals.html');
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error serving withdrawals.html:', err);
+            res.status(500).json({ error: 'Could not serve withdrawals.html', details: err.message });
+        }
+    });
 });
 
 // Import deposits from Excel file
@@ -2333,7 +2387,15 @@ app.get('/api/withdrawals/:orderNumber', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
+    const publicPath = path.join(__dirname, 'public');
+    const fs = require('fs');
+    const publicExists = fs.existsSync(publicPath);
     console.log(`Yono777 Customer Support Server running on port ${PORT}`);
     console.log(`Open http://localhost:${PORT} in your browser`);
+    console.log(`Public directory: ${publicPath} (${publicExists ? 'EXISTS' : 'NOT FOUND'})`);
+    if (publicExists) {
+        console.log(`Files: ${fs.readdirSync(publicPath).join(', ')}`);
+    }
 });
+
 
