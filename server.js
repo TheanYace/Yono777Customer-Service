@@ -29,8 +29,27 @@ const TELEGRAM_GROUP_ID = process.env.TELEGRAM_GROUP_ID || 'YOUR_TELEGRAM_GROUP_
 let telegramBot = null;
 if (TELEGRAM_BOT_TOKEN && TELEGRAM_BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
     try {
-        telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+        // Use polling with error handling for multiple instance conflicts
+        telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { 
+            polling: {
+                interval: 1000,
+                autoStart: true,
+                params: {
+                    timeout: 10
+                }
+            }
+        });
         console.log('Telegram bot initialized successfully');
+        
+        // Handle polling errors (e.g., from multiple instances)
+        telegramBot.on('polling_error', (err) => {
+            if (err.code === 'ETELEGRAM' && err.message.includes('409')) {
+                console.log('[Telegram] Polling conflict: Another instance is running. Stopping polling...');
+                telegramBot.stopPolling();
+            } else {
+                console.error('[Telegram] Polling error:', err.code, err.message);
+            }
+        });
         
         // Handle incoming messages from Telegram
         telegramBot.on('message', async (msg) => {
@@ -2536,7 +2555,7 @@ app.get('/api/withdrawals/:orderNumber', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     const publicPath = path.join(__dirname, 'public');
     const fs = require('fs');
     const publicExists = fs.existsSync(publicPath);
@@ -2547,5 +2566,31 @@ app.listen(PORT, () => {
         console.log(`Files: ${fs.readdirSync(publicPath).join(', ')}`);
     }
 });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received: shutting down gracefully...');
+    if (telegramBot) {
+        console.log('Stopping Telegram bot polling...');
+        telegramBot.stopPolling();
+    }
+    server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('SIGINT received: shutting down gracefully...');
+    if (telegramBot) {
+        console.log('Stopping Telegram bot polling...');
+        telegramBot.stopPolling();
+    }
+    server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+    });
+});
+
 
 
