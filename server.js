@@ -10,6 +10,7 @@ const { db, dbHelpers, initializeTables } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const BUILD_ID = Date.now(); // Force redeployment
 
 // Initialize database
 initializeTables();
@@ -370,14 +371,14 @@ app.use(cors({
     credentials: true
 }));
 app.use(bodyParser.json());
-app.use(express.static('public'));
+// app.use(express.static('public')); // Disabled: serving HTML through routes instead
 
 // Health check route
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'ok', 
         timestamp: new Date().toISOString(),
-        publicDir: path.join(__dirname, 'public')
+        version: BUILD_ID
     });
 });
 
