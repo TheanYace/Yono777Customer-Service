@@ -381,6 +381,25 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Helper function to serve HTML files with fallback
+function serveHtmlFile(res, filename, fallbackContent) {
+    const fs = require('fs');
+    const filePath = path.join(__dirname, 'public', filename);
+    
+    if (fs.existsSync(filePath)) {
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            return res.setHeader('Content-Type', 'text/html').send(content);
+        } catch (err) {
+            console.error(`Error reading ${filename}:`, err);
+        }
+    }
+    
+    // Fallback to inline content if file doesn't exist
+    res.setHeader('Content-Type', 'text/html');
+    res.send(fallbackContent);
+}
+
 // Temporary debug endpoint to inspect deposits in DB
 app.get('/debug/deposits', (req, res) => {
     dbHelpers.getAllDeposits((err, deposits) => {
@@ -2022,56 +2041,186 @@ app.post('/api/upload-uid-files', upload.array('files', 10), async (req, res) =>
 // Serve main page
 app.get('/', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'index.html');
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            console.error('Error serving index.html:', err);
-            res.status(500).json({ error: 'Could not serve index.html', details: err.message });
+    const fs = require('fs');
+    
+    // Try to serve from file first
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath, (err) => {
+            if (err) {
+                console.error('Error serving index.html:', err);
+                res.status(500).json({ error: 'Could not serve index.html', details: err.message });
+            }
+        });
+    }
+    
+    // Fallback: serve inline HTML
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yono777 Customer Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    });
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .nav-item {
+            display: block;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .nav-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .status.online {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Yono777</h1>
+        <p class="subtitle">AI Customer Support System</p>
+        
+        <div class="nav-menu">
+            <a href="/chat" class="nav-item">💬 Chat with Support</a>
+            <a href="/deposits" class="nav-item">💰 Manage Deposits</a>
+            <a href="/withdrawals" class="nav-item">🏦 Manage Withdrawals</a>
+            <a href="/admin" class="nav-item">📊 Admin Dashboard</a>
+        </div>
+        
+        <div class="status online">
+            ✓ Service Status: Online
+        </div>
+    </div>
+</body>
+</html>`);
 });
 
 // Serve deposits page
 app.get('/deposits', (req, res) => {
+    const fs = require('fs');
     const filePath = path.join(__dirname, 'public', 'deposits.html');
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            console.error('Error serving deposits.html:', err);
-            res.status(500).json({ error: 'Could not serve deposits.html', details: err.message });
-        }
-    });
+    
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath, (err) => {
+            if (err) console.error('Error serving deposits.html:', err);
+        });
+    }
+    
+    // Fallback
+    res.setHeader('Content-Type', 'text/html');
+    res.send('<h1>💰 Deposits</h1><p><a href="/">Back to Home</a></p><p>Deposits page not yet loaded. Please try again shortly.</p>');
 });
 
 // Serve chat page
 app.get('/chat', (req, res) => {
+    const fs = require('fs');
     const filePath = path.join(__dirname, 'public', 'chat.html');
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            console.error('Error serving chat.html:', err);
-            res.status(500).json({ error: 'Could not serve chat.html', details: err.message });
-        }
-    });
+    
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath, (err) => {
+            if (err) console.error('Error serving chat.html:', err);
+        });
+    }
+    
+    // Fallback
+    res.setHeader('Content-Type', 'text/html');
+    res.send('<h1>💬 Chat Support</h1><p><a href="/">Back to Home</a></p><p>Chat page not yet loaded. Please try again shortly.</p>');
 });
 
 // Serve admin page
 app.get('/admin', (req, res) => {
+    const fs = require('fs');
     const filePath = path.join(__dirname, 'public', 'admin.html');
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            console.error('Error serving admin.html:', err);
-            res.status(500).json({ error: 'Could not serve admin.html', details: err.message });
-        }
-    });
+    
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath, (err) => {
+            if (err) console.error('Error serving admin.html:', err);
+        });
+    }
+    
+    // Fallback
+    res.setHeader('Content-Type', 'text/html');
+    res.send('<h1>📊 Admin Dashboard</h1><p><a href="/">Back to Home</a></p><p>Admin page not yet loaded. Please try again shortly.</p>');
 });
 
 // Serve withdrawals page
 app.get('/withdrawals', (req, res) => {
+    const fs = require('fs');
     const filePath = path.join(__dirname, 'public', 'withdrawals.html');
-    res.sendFile(filePath, (err) => {
-        if (err) {
-            console.error('Error serving withdrawals.html:', err);
-            res.status(500).json({ error: 'Could not serve withdrawals.html', details: err.message });
-        }
-    });
+    
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath, (err) => {
+            if (err) console.error('Error serving withdrawals.html:', err);
+        });
+    }
+    
+    // Fallback
+    res.setHeader('Content-Type', 'text/html');
+    res.send('<h1>🏦 Withdrawals</h1><p><a href="/">Back to Home</a></p><p>Withdrawals page not yet loaded. Please try again shortly.</p>');
 });
 
 // Import deposits from Excel file
