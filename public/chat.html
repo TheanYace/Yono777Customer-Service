@@ -35,8 +35,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
+            width: 100%;
         }
         
         h1 {
@@ -63,7 +64,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             width: 100%;
             padding: 20px;
@@ -101,10 +102,12 @@
         }
         
         .message-content {
-            max-width: 60%;
-            padding: 10px 15px;
+            max-width: 70%;
+            padding: 12px 15px;
             border-radius: 8px;
             word-wrap: break-word;
+            white-space: pre-wrap;
+            line-height: 1.4;
         }
         
         .message.user .message-content {
@@ -117,9 +120,39 @@
             color: #333;
         }
         
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .action-btn {
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 12px;
+            transition: transform 0.2s;
+            white-space: nowrap;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .action-btn:active {
+            transform: translateY(0);
+        }
+        
         .input-area {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
         
         input[type="text"] {
@@ -137,7 +170,7 @@
             box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
         }
         
-        button {
+        .send-btn {
             padding: 12px 25px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -148,11 +181,11 @@
             transition: transform 0.2s;
         }
         
-        button:hover {
+        .send-btn:hover {
             transform: translateY(-2px);
         }
         
-        button:disabled {
+        .send-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
@@ -163,13 +196,40 @@
             color: #999;
             margin-bottom: 10px;
         }
+        
+        .loading {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            margin: 0 3px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .loading:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .loading:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>💬 Customer Support Chat</h1>
+                <h1>💬 YONO777™ Customer Support</h1>
                 <div class="nav-links">
                     <a href="/">Home</a>
                     <a href="/deposits">Deposits</a>
@@ -179,10 +239,19 @@
         
         <div class="chat-container">
             <div class="user-id">Your ID: <span id="userId">Loading...</span></div>
+            
             <div class="messages" id="messages"></div>
+            
+            <div class="quick-actions">
+                <button class="action-btn" onclick="quickAction('/help')">📞 Help</button>
+                <button class="action-btn" onclick="quickAction('I need help with withdrawal')">🏦 Withdrawal</button>
+                <button class="action-btn" onclick="quickAction('I need help with deposit')">💰 Deposit</button>
+                <button class="action-btn" onclick="quickAction('/stats')">📊 Statistics</button>
+            </div>
+            
             <div class="input-area">
-                <input type="text" id="messageInput" placeholder="Type your message..." autocomplete="off">
-                <button id="sendBtn" onclick="sendMessage()">Send</button>
+                <input type="text" id="messageInput" placeholder="Type your message or order number..." autocomplete="off">
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
             </div>
         </div>
     </div>
@@ -200,6 +269,17 @@
         }
         userIdSpan.textContent = userId;
         
+        // Show welcome message on load
+        window.addEventListener('load', () => {
+            addMessageToDisplay('👋 Welcome to YONO777™ Customer Support!\n\nI\'m here 24/7 to help with:\n• Deposit issues\n• Withdrawal problems\n• Bonus questions\n• Account settings\n\nSend me a message or use the quick action buttons below!', 'bot');
+            loadHistory();
+        });
+        
+        function quickAction(message) {
+            messageInput.value = message;
+            messageInput.focus();
+        }
+        
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message) return;
@@ -208,6 +288,9 @@
             addMessageToDisplay(message, 'user');
             messageInput.value = '';
             sendBtn.disabled = true;
+            
+            // Show typing indicator
+            showTypingIndicator();
             
             try {
                 const response = await fetch('/api/chat', {
@@ -221,13 +304,17 @@
                     })
                 });
                 
+                // Remove typing indicator
+                removeTypingIndicator();
+                
                 const data = await response.json();
-                if (response.ok && data.reply) {
-                    addMessageToDisplay(data.reply, 'bot');
+                if (response.ok && data.response) {
+                    addMessageToDisplay(data.response, 'bot');
                 } else {
                     addMessageToDisplay('Sorry, I encountered an error. Please try again.', 'bot');
                 }
             } catch (error) {
+                removeTypingIndicator();
                 addMessageToDisplay('Connection error. Please try again.', 'bot');
             } finally {
                 sendBtn.disabled = false;
@@ -243,6 +330,22 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
         
+        function showTypingIndicator() {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message bot';
+            msgDiv.id = 'typingIndicator';
+            msgDiv.innerHTML = `<div class="message-content"><span class="loading"></span><span class="loading"></span><span class="loading"></span></div>`;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -250,7 +353,8 @@
         }
         
         messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 sendMessage();
             }
         });
@@ -259,20 +363,17 @@
         async function loadHistory() {
             try {
                 const response = await fetch(`/api/history/${userId}`);
-                const history = await response.json();
-                history.forEach(msg => {
-                    addMessageToDisplay(msg.message, 'user');
-                    if (msg.reply) {
-                        addMessageToDisplay(msg.reply, 'bot');
-                    }
-                });
+                const data = await response.json();
+                if (data.history && data.history.length > 0) {
+                    data.history.forEach(msg => {
+                        addMessageToDisplay(msg.userMessage, 'user');
+                        addMessageToDisplay(msg.botResponse, 'bot');
+                    });
+                }
             } catch (error) {
                 console.error('Failed to load history:', error);
             }
         }
-        
-        loadHistory();
-        messageInput.focus();
     </script>
 </body>
 </html>
