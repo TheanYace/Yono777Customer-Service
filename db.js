@@ -1,14 +1,23 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 // Create/open database file
-const dbPath = path.join(__dirname, 'yono777.db');
+const configuredPath = process.env.DB_PATH && process.env.DB_PATH.trim();
+const dbPath = configuredPath ? path.resolve(configuredPath) : path.join(__dirname, 'yono777.db');
+
+try {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+} catch (e) {
+    console.error('Error ensuring database directory exists:', e.message);
+}
+
 let db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
         process.exit(1);
     } else {
-        console.log('Connected to SQLite database');
+        console.log('Connected to SQLite database at', dbPath);
         // Set pragmas
         db.run('PRAGMA journal_mode = WAL');
         db.run('PRAGMA foreign_keys = ON');
