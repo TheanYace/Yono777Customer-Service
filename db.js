@@ -3,16 +3,17 @@ const path = require('path');
 
 // Create/open database file
 const dbPath = path.join(__dirname, 'yono777.db');
-const db = new sqlite3.Database(dbPath, (err) => {
+let db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
+        process.exit(1);
     } else {
         console.log('Connected to SQLite database');
+        // Set pragmas
+        db.run('PRAGMA journal_mode = WAL');
+        db.run('PRAGMA foreign_keys = ON');
     }
 });
-
-// Enable foreign keys
-db.run('PRAGMA foreign_keys = ON');
 
 // Initialize tables
 function initializeTables() {

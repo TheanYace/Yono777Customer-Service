@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YONO777 Staff Panel - Manual Reply</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0cc7b6 0%, #19d2b5 40%, #0fcab7 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .staff-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            height: calc(100vh - 40px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(135deg, #12b8a6 0%, #0ea392 100%);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 15px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 14px;
+        }
+
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .conversation-list {
+            list-style: none;
+        }
+
+        .conversation-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .conversation-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .conversation-item.active {
+            background: rgba(255, 255, 255, 0.3);
+            border-left: 4px solid white;
+        }
+
+        .conversation-item .user-id {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .conversation-item .last-message {
+            font-size: 12px;
+            opacity: 0.9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .conversation-item .timestamp {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #12b8a6 0%, #0ea392 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h3 {
+            font-size: 18px;
+        }
+
+        .chat-header .user-info {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f6f8fb;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #16c4b0, #0ea392);
+            color: white;
+            border-top-right-radius: 4px;
+        }
+
+        .message.bot .message-bubble {
+            background: white;
+            color: #0f172a;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-top-left-radius: 4px;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        .message.user .message-meta {
+            text-align: right;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid rgba(15, 23, 42, 0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group textarea {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            min-height: 50px;
+            max-height: 150px;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #12b8a6;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #16c4b0, #0ea392);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(18, 184, 166, 0.4);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-container h2 {
+            margin-bottom: 30px;
+            color: #12b8a6;
+            text-align: center;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(15, 23, 42, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .login-form button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #16c4b0, #0ea392);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-form button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(18, 184, 166, 0.4);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .badge.user {
+            background: rgba(18, 184, 166, 0.2);
+            color: #0ea392;
+        }
+
+        .badge.staff {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <h2>🔐 Staff Login</h2>
+        <form class="login-form" id="loginForm">
+            <input type="text" id="staffUsername" placeholder="Username" required>
+            <input type="password" id="staffPassword" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <!-- Staff Panel -->
+    <div id="staffPanel" class="staff-container" style="display: none;">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>💬 Conversations</h2>
+            <div class="search-box">
+                <input type="text" id="searchConversations" placeholder="Search conversations...">
+            </div>
+            <ul class="conversation-list" id="conversationList">
+                <li class="empty-state">
+                    <h3>No conversations yet</h3>
+                    <p>Conversations will appear here</p>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-header">
+                <div>
+                    <h3>YONO777™ Support</h3>
+                    <div class="user-info" id="currentUserInfo">Select a conversation to start</div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-state">
+                    <h3>Select a conversation</h3>
+                    <p>Choose a conversation from the sidebar to view and reply</p>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-group">
+                    <textarea id="messageInput" placeholder="Type your reply as the bot..." disabled></textarea>
+                    <button class="send-button" id="sendButton" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        let currentUserId = null;
+        let isAuthenticated = false;
+
+        // Check if already logged in
+        const savedAuth = localStorage.getItem('staffAuth');
+        if (savedAuth) {
+            try {
+                const auth = JSON.parse(savedAuth);
+                if (auth.token && auth.expires > Date.now()) {
+                    isAuthenticated = true;
+                    showStaffPanel();
+                }
+            } catch (e) {
+                localStorage.removeItem('staffAuth');
+            }
+        }
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('staffUsername').value;
+            const password = document.getElementById('staffPassword').value;
+
+            try {
+                const response = await fetch('/api/staff/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    localStorage.setItem('staffAuth', JSON.stringify({
+                        token: data.token,
+                        expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+                    }));
+                    isAuthenticated = true;
+                    showStaffPanel();
+                    loadConversations();
+                } else {
+                    alert('Invalid credentials');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed. Please try again.');
+            }
+        });
+
+        function showStaffPanel() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('staffPanel').style.display = 'flex';
+        }
+
+        // Load conversations
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/staff/conversations', {
+                    headers: {
+                        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('staffAuth')).token}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayConversations(data.conversations);
+                }
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        function displayConversations(conversations) {
+            const list = document.getElementById('conversationList');
+            list.innerHTML = '';
+
+            if (conversations.length === 0) {
+                list.innerHTML = '<li class="empty-state"><h3>No conversations yet</h3></li>';
+                return;
+            }
+
+            conversations.forEach(conv => {
+                const item = document.createElement('li');
+                item.className = 'conversation-item';
+                item.innerHTML = `
+                    <div class="user-id">User: ${conv.userId}</div>
+                    <div class="last-message">${conv.lastMessage || 'No messages'}</div>
+                    <div class="timestamp">${new Date(conv.lastTimestamp).toLocaleString()}</div>
+                `;
+                item.addEventListener('click', () => selectConversation(conv.userId));
+                list.appendChild(item);
+            });
+        }
+
+        async function selectConversation(userId) {
+            currentUserId = userId;
+            
+            // Update active state
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Update header
+            document.getElementById('currentUserInfo').textContent = `User ID: ${userId}`;
+
+            // Enable input
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendButton').disabled = false;
+
+            // Load messages
+            await loadMessages(userId);
+        }
+
+        async function loadMessages(userId) {
+            try {
+                const response = await fetch(`/api/staff/conversations/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('staffAuth')).token}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayMessages(data.messages);
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        function displayMessages(messages) {
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${msg.role === 'user' ? 'user' : 'bot'}`;
+                
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble';
+                bubble.textContent = msg.message;
+                
+                const meta = document.createElement('div');
+                meta.className = 'message-meta';
+                meta.innerHTML = `
+                    <span class="badge ${msg.role === 'user' ? 'user' : 'staff'}">${msg.role === 'user' ? 'User' : 'Bot'}</span>
+                    <span>${new Date(msg.timestamp).toLocaleString()}</span>
+                `;
+                
+                bubble.appendChild(meta);
+                messageDiv.appendChild(bubble);
+                container.appendChild(messageDiv);
+            });
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Send message
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !currentUserId) return;
+
+            const button = document.getElementById('sendButton');
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/staff/reply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('staffAuth')).token}`
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    input.value = '';
+                    await loadMessages(currentUserId);
+                    await loadConversations(); // Refresh list
+                } else {
+                    alert('Failed to send message: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Failed to send message. Please try again.');
+            } finally {
+                button.disabled = false;
+                input.focus();
+            }
+        }
+
+        // Search conversations
+        document.getElementById('searchConversations').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+
+        // Auto-refresh conversations every 10 seconds
+        if (isAuthenticated) {
+            setInterval(loadConversations, 10000);
+        }
+    </script>
+</body>
+</html>
+
