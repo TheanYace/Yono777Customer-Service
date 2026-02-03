@@ -185,6 +185,8 @@ async function handleFormSubmit() {
     
     // Send initial message based on concern
     const concernMessages = {
+        'deposit': 'I need help with deposit',
+        'withdrawal': 'I need help with withdrawal',
         'game': 'I have a game concern',
         'bonus': 'I need help with bonus',
         'bank': 'I have a bank concern',
