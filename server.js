@@ -10,7 +10,6 @@ const { db, dbHelpers, initializeTables } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BUILD_ID = Date.now(); // Force redeployment
 
 // Initialize database
 initializeTables();
@@ -29,27 +28,8 @@ const TELEGRAM_GROUP_ID = process.env.TELEGRAM_GROUP_ID || 'YOUR_TELEGRAM_GROUP_
 let telegramBot = null;
 if (TELEGRAM_BOT_TOKEN && TELEGRAM_BOT_TOKEN !== 'YOUR_TELEGRAM_BOT_TOKEN') {
     try {
-        // Use polling with error handling for multiple instance conflicts
-        telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { 
-            polling: {
-                interval: 1000,
-                autoStart: true,
-                params: {
-                    timeout: 10
-                }
-            }
-        });
+        telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
         console.log('Telegram bot initialized successfully');
-        
-        // Handle polling errors (e.g., from multiple instances)
-        telegramBot.on('polling_error', (err) => {
-            if (err.code === 'ETELEGRAM' && err.message.includes('409')) {
-                console.log('[Telegram] Polling conflict: Another instance is running. Stopping polling...');
-                telegramBot.stopPolling();
-            } else {
-                console.error('[Telegram] Polling error:', err.code, err.message);
-            }
-        });
         
         // Handle incoming messages from Telegram
         telegramBot.on('message', async (msg) => {
@@ -390,35 +370,7 @@ app.use(cors({
     credentials: true
 }));
 app.use(bodyParser.json());
-// app.use(express.static('public')); // Disabled: serving HTML through routes instead
-
-// Health check route
-app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        timestamp: new Date().toISOString(),
-        version: BUILD_ID
-    });
-});
-
-// Helper function to serve HTML files with fallback
-function serveHtmlFile(res, filename, fallbackContent) {
-    const fs = require('fs');
-    const filePath = path.join(__dirname, 'public', filename);
-    
-    if (fs.existsSync(filePath)) {
-        try {
-            const content = fs.readFileSync(filePath, 'utf8');
-            return res.setHeader('Content-Type', 'text/html').send(content);
-        } catch (err) {
-            console.error(`Error reading ${filename}:`, err);
-        }
-    }
-    
-    // Fallback to inline content if file doesn't exist
-    res.setHeader('Content-Type', 'text/html');
-    res.send(fallbackContent);
-}
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Temporary debug endpoint to inspect deposits in DB
 app.get('/debug/deposits', (req, res) => {
@@ -2060,188 +2012,10 @@ app.post('/api/upload-uid-files', upload.array('files', 10), async (req, res) =>
 
 // Serve main page
 app.get('/', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'index.html');
-    const fs = require('fs');
-    
-    // Try to serve from file first
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath, (err) => {
-            if (err) {
-                console.error('Error serving index.html:', err);
-                res.status(500).json({ error: 'Could not serve index.html', details: err.message });
-            }
-        });
-    }
-    
-    // Fallback: serve inline HTML
-    res.setHeader('Content-Type', 'text/html');
-    res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yono777 Customer Support</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        
-        .subtitle {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        
-        .nav-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .nav-item {
-            display: block;
-            padding: 15px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: 500;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .nav-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        .status {
-            margin-top: 30px;
-            padding: 15px;
-            background: #f0f0f0;
-            border-radius: 5px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .status.online {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎮 Yono777</h1>
-        <p class="subtitle">AI Customer Support System</p>
-        
-        <div class="nav-menu">
-            <a href="/chat" class="nav-item">💬 Chat with Support</a>
-            <a href="/deposits" class="nav-item">💰 Manage Deposits</a>
-            <a href="/withdrawals" class="nav-item">🏦 Manage Withdrawals</a>
-            <a href="/admin" class="nav-item">📊 Admin Dashboard</a>
-        </div>
-        
-        <div class="status online">
-            ✓ Service Status: Online
-        </div>
-    </div>
-</body>
-</html>`);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve deposits page
-app.get('/deposits', (req, res) => {
-    const fs = require('fs');
-    const filePath = path.join(__dirname, 'public', 'deposits.html');
-    
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath, (err) => {
-            if (err) console.error('Error serving deposits.html:', err);
-        });
-    }
-    
-    // Fallback
-    res.setHeader('Content-Type', 'text/html');
-    res.send('<h1>💰 Deposits</h1><p><a href="/">Back to Home</a></p><p>Deposits page not yet loaded. Please try again shortly.</p>');
-});
-
-// Serve chat page
-app.get('/chat', (req, res) => {
-    const fs = require('fs');
-    const filePath = path.join(__dirname, 'public', 'chat.html');
-    
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath, (err) => {
-            if (err) console.error('Error serving chat.html:', err);
-        });
-    }
-    
-    // Fallback
-    res.setHeader('Content-Type', 'text/html');
-    res.send('<h1>💬 Chat Support</h1><p><a href="/">Back to Home</a></p><p>Chat page not yet loaded. Please try again shortly.</p>');
-});
-
-// Serve admin page
-app.get('/admin', (req, res) => {
-    const fs = require('fs');
-    const filePath = path.join(__dirname, 'public', 'admin.html');
-    
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath, (err) => {
-            if (err) console.error('Error serving admin.html:', err);
-        });
-    }
-    
-    // Fallback
-    res.setHeader('Content-Type', 'text/html');
-    res.send('<h1>📊 Admin Dashboard</h1><p><a href="/">Back to Home</a></p><p>Admin page not yet loaded. Please try again shortly.</p>');
-});
-
-// Serve withdrawals page
-app.get('/withdrawals', (req, res) => {
-    const fs = require('fs');
-    const filePath = path.join(__dirname, 'public', 'withdrawals.html');
-    
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath, (err) => {
-            if (err) console.error('Error serving withdrawals.html:', err);
-        });
-    }
-    
-    // Fallback
-    res.setHeader('Content-Type', 'text/html');
-    res.send('<h1>🏦 Withdrawals</h1><p><a href="/">Back to Home</a></p><p>Withdrawals page not yet loaded. Please try again shortly.</p>');
-});
 
 // Import deposits from Excel file
 app.post('/api/import', upload.single('file'), (req, res) => {
@@ -2555,42 +2329,8 @@ app.get('/api/withdrawals/:orderNumber', (req, res) => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
-    const publicPath = path.join(__dirname, 'public');
-    const fs = require('fs');
-    const publicExists = fs.existsSync(publicPath);
+app.listen(PORT, () => {
     console.log(`Yono777 Customer Support Server running on port ${PORT}`);
     console.log(`Open http://localhost:${PORT} in your browser`);
-    console.log(`Public directory: ${publicPath} (${publicExists ? 'EXISTS' : 'NOT FOUND'})`);
-    if (publicExists) {
-        console.log(`Files: ${fs.readdirSync(publicPath).join(', ')}`);
-    }
 });
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received: shutting down gracefully...');
-    if (telegramBot) {
-        console.log('Stopping Telegram bot polling...');
-        telegramBot.stopPolling();
-    }
-    server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-    });
-});
-
-process.on('SIGINT', () => {
-    console.log('SIGINT received: shutting down gracefully...');
-    if (telegramBot) {
-        console.log('Stopping Telegram bot polling...');
-        telegramBot.stopPolling();
-    }
-    server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-    });
-});
-
-
 
