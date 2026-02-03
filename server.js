@@ -1728,11 +1728,25 @@ app.post('/api/staff/login', (req, res) => {
     }
 });
 
+function getStaffToken(req) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice('Bearer '.length).trim();
+    }
+    if (req.headers['x-staff-token']) {
+        return req.headers['x-staff-token'];
+    }
+    if (req.query && req.query.token) {
+        return req.query.token;
+    }
+    return null;
+}
+
 // Get all conversations (for staff panel)
 app.get('/api/staff/conversations', (req, res) => {
     // Simple auth check (in production, verify JWT)
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getStaffToken(req);
+    if (!token) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -1764,8 +1778,8 @@ app.get('/api/staff/conversations', (req, res) => {
 
 // Get messages for a specific user
 app.get('/api/staff/conversations/:userId', (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getStaffToken(req);
+    if (!token) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
@@ -1807,8 +1821,8 @@ app.get('/api/staff/conversations/:userId', (req, res) => {
 
 // Send manual reply as bot
 app.post('/api/staff/reply', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getStaffToken(req);
+    if (!token) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
