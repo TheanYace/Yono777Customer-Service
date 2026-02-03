@@ -1,6 +1,8 @@
 // Generate unique user ID
 const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
+
+const BOT_AVATAR_IMAGE = 'https://ibb.co/ch7Mf4C9';
 const preQueryModal = document.getElementById('preQueryModal');
 const chatContainer = document.getElementById('chatContainer');
 const chatMessages = document.getElementById('chatMessages');
@@ -247,7 +249,8 @@ function addMessage(message, isUser = false, imageUrl = null) {
     if (isUser) {
         avatarDiv.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
     } else {
-        avatarDiv.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
+        // Use bot avatar image with fallback to SVG
+        avatarDiv.innerHTML = `<img src="${BOT_AVATAR_IMAGE}" alt="AI Assistant" class="message-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;" class="avatar-fallback"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>`;
     }
     
     const wrapperDiv = document.createElement('div');
@@ -305,7 +308,8 @@ function showTypingIndicator() {
     
     const avatarDiv = document.createElement('div');
     avatarDiv.className = 'message-avatar';
-    avatarDiv.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
+    // Use bot avatar image with fallback to SVG
+    avatarDiv.innerHTML = `<img src="${BOT_AVATAR_IMAGE}" alt="AI Assistant" class="message-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;" class="avatar-fallback"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>`;
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content typing-indicator';
