@@ -367,6 +367,7 @@
                 if (auth.token && auth.expires > Date.now()) {
                     isAuthenticated = true;
                     showStaffPanel();
+                    loadConversations();
                 }
             } catch (e) {
                 localStorage.removeItem('staffAuth');
@@ -444,19 +445,21 @@
                     <div class="last-message">${conv.lastMessage || 'No messages'}</div>
                     <div class="timestamp">${new Date(conv.lastTimestamp).toLocaleString()}</div>
                 `;
-                item.addEventListener('click', () => selectConversation(conv.userId));
+                item.addEventListener('click', () => selectConversation(conv.userId, item));
                 list.appendChild(item);
             });
         }
 
-        async function selectConversation(userId) {
+        async function selectConversation(userId, selectedItem) {
             currentUserId = userId;
             
             // Update active state
             document.querySelectorAll('.conversation-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.currentTarget.classList.add('active');
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+            }
 
             // Update header
             document.getElementById('currentUserInfo').textContent = `User ID: ${userId}`;
