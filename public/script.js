@@ -1,6 +1,38 @@
-// Generate unique user ID
-const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+// Generate or retrieve unique user ID from localStorage
+let userId = localStorage.getItem('yono777_userId');
+if (!userId) {
+    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('yono777_userId', userId);
+}
 
+// Load conversation history from server
+async function loadConversationHistory() {
+    try {
+        const response = await fetch(`/api/history/${userId}`);
+        if (!response.ok) {
+            console.error('Failed to load history');
+            return;
+        }
+        
+        const data = await response.json();
+        const history = data.history || [];
+        
+        if (history.length > 0) {
+            // Sort by timestamp
+            history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            // Display each conversation in the chat
+            history.forEach(item => {
+                addMessageDirect(item.userMessage, true);
+                addMessageDirect(item.botResponse, false);
+            });
+            
+            console.log(`Loaded ${history.length} previous conversations`);
+        }
+    } catch (error) {
+        console.error('Error loading conversation history:', error);
+    }
+}
 
 // Bot avatar image - use direct image URL (not ibb.co page URL)
 // For ibb.co: Right-click image > "Copy image address" to get direct link
@@ -186,6 +218,9 @@ async function handleFormSubmit() {
     setTimeout(() => {
         preQueryModal.style.display = 'none';
         chatContainer.style.display = 'block';
+        
+        // Load conversation history after modal is hidden
+        loadConversationHistory();
     }, 300);
     
     // Send initial message based on concern
@@ -214,6 +249,9 @@ closeModalBtn.addEventListener('click', () => {
     // Close modal and show chat anyway
     preQueryModal.style.display = 'none';
     chatContainer.style.display = 'block';
+    
+    // Load conversation history
+    loadConversationHistory();
 });
 
 // Handle UID checkbox
