@@ -358,17 +358,6 @@
         const API_URL = '/api';
         let currentUserId = null;
         let isAuthenticated = false;
-        
-            function getStaffToken() {
-                const stored = localStorage.getItem('staffAuth');
-                if (!stored) return null;
-                try {
-                    const parsed = JSON.parse(stored);
-                    return parsed && parsed.token ? parsed.token : null;
-                } catch (e) {
-                    return null;
-                }
-            }
 
         // Check if already logged in
         const savedAuth = localStorage.getItem('staffAuth');
@@ -378,7 +367,6 @@
                 if (auth.token && auth.expires > Date.now()) {
                     isAuthenticated = true;
                     showStaffPanel();
-                    loadConversations();
                 }
             } catch (e) {
                 localStorage.removeItem('staffAuth');
@@ -424,17 +412,11 @@
         // Load conversations
         async function loadConversations() {
             try {
-                    const token = getStaffToken();
-                    if (!token) {
-                        console.error('Missing staff token');
-                        return;
+                const response = await fetch('/api/staff/conversations', {
+                    headers: {
+                        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('staffAuth')).token}`
                     }
-                    const response = await fetch(`/api/staff/conversations?token=${encodeURIComponent(token)}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'X-Staff-Token': token
-                        }
-                    });
+                });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -462,21 +444,19 @@
                     <div class="last-message">${conv.lastMessage || 'No messages'}</div>
                     <div class="timestamp">${new Date(conv.lastTimestamp).toLocaleString()}</div>
                 `;
-                item.addEventListener('click', () => selectConversation(conv.userId, item));
+                item.addEventListener('click', () => selectConversation(conv.userId));
                 list.appendChild(item);
             });
         }
 
-        async function selectConversation(userId, selectedItem) {
+        async function selectConversation(userId) {
             currentUserId = userId;
             
             // Update active state
             document.querySelectorAll('.conversation-item').forEach(item => {
                 item.classList.remove('active');
             });
-            if (selectedItem) {
-                selectedItem.classList.add('active');
-            }
+            event.currentTarget.classList.add('active');
 
             // Update header
             document.getElementById('currentUserInfo').textContent = `User ID: ${userId}`;
@@ -491,17 +471,11 @@
 
         async function loadMessages(userId) {
             try {
-                    const token = getStaffToken();
-                    if (!token) {
-                        console.error('Missing staff token');
-                        return;
+                const response = await fetch(`/api/staff/conversations/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('staffAuth')).token}`
                     }
-                    const response = await fetch(`/api/staff/conversations/${userId}?token=${encodeURIComponent(token)}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'X-Staff-Token': token
-                        }
-                    });
+                });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -558,17 +532,11 @@
             button.disabled = true;
 
             try {
-                const token = getStaffToken();
-                if (!token) {
-                    alert('Session expired. Please log in again.');
-                    return;
-                }
-                const response = await fetch(`/api/staff/reply?token=${encodeURIComponent(token)}`, {
+                const response = await fetch('/api/staff/reply', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                        'X-Staff-Token': token
+                        'Authorization': `Bearer ${JSON.parse(localStorage.getItem('staffAuth')).token}`
                     },
                     body: JSON.stringify({
                         userId: currentUserId,

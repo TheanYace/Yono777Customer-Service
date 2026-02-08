@@ -1,38 +1,6 @@
-// Generate or retrieve unique user ID from localStorage
-let userId = localStorage.getItem('yono777_userId');
-if (!userId) {
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('yono777_userId', userId);
-}
+// Generate unique user ID
+const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-// Load conversation history from server
-async function loadConversationHistory() {
-    try {
-        const response = await fetch(`/api/history/${userId}`);
-        if (!response.ok) {
-            console.error('Failed to load history');
-            return;
-        }
-        
-        const data = await response.json();
-        const history = data.history || [];
-        
-        if (history.length > 0) {
-            // Sort by timestamp
-            history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            
-            // Display each conversation in the chat
-            history.forEach(item => {
-                addMessageDirect(item.userMessage, true);
-                addMessageDirect(item.botResponse, false);
-            });
-            
-            console.log(`Loaded ${history.length} previous conversations`);
-        }
-    } catch (error) {
-        console.error('Error loading conversation history:', error);
-    }
-}
 
 // Bot avatar image - use direct image URL (not ibb.co page URL)
 // For ibb.co: Right-click image > "Copy image address" to get direct link
@@ -218,9 +186,6 @@ async function handleFormSubmit() {
     setTimeout(() => {
         preQueryModal.style.display = 'none';
         chatContainer.style.display = 'block';
-        
-        // Load conversation history after modal is hidden
-        loadConversationHistory();
     }, 300);
     
     // Send initial message based on concern
@@ -249,9 +214,6 @@ closeModalBtn.addEventListener('click', () => {
     // Close modal and show chat anyway
     preQueryModal.style.display = 'none';
     chatContainer.style.display = 'block';
-    
-    // Load conversation history
-    loadConversationHistory();
 });
 
 // Handle UID checkbox
@@ -278,8 +240,8 @@ function updateCharCount() {
     }
 }
 
-// Add message to chat
-function addMessage(message, isUser = false, imageUrl = null) {
+// Add message to chat with support for images, PDFs, and videos
+function addMessage(message, isUser = false, imageUrl = null, fileType = null, fileName = null) {
     const msgRow = document.createElement('div');
     msgRow.className = `msg-row ${isUser ? 'user' : 'bot'}`;
     
@@ -287,21 +249,77 @@ function addMessage(message, isUser = false, imageUrl = null) {
     bubble.className = 'bubble';
     
     // Add image if provided
-    if (imageUrl) {
+    if (imageUrl && (fileType === 'image' || !fileType)) {
+        console.log('[UI] Adding image to chat - URL length:', imageUrl ? imageUrl.length : 0, 'fileName:', fileName);
+        const imgContainer = document.createElement('div');
+        imgContainer.style.marginBottom = message ? '8px' : '0';
+        imgContainer.style.width = '100%';
+        imgContainer.style.display = 'flex';
+        imgContainer.style.justifyContent = isUser ? 'flex-end' : 'flex-start';
+        
         const img = document.createElement('img');
         img.src = imageUrl;
         img.style.maxWidth = '100%';
+        img.style.maxHeight = '400px';
         img.style.borderRadius = '8px';
-        img.style.marginBottom = '8px';
-        img.alt = 'Pasted image';
-        bubble.appendChild(img);
+        img.style.objectFit = 'contain';
+        img.style.cursor = 'pointer';
+        img.style.display = 'block';
+        img.alt = fileName || 'Uploaded image';
+        img.onerror = (e) => {
+            console.error('[UI] Error loading image:', e);
+            imgContainer.innerHTML = '<div style="padding: 10px; color: red;">❌ Failed to load image</div>';
+        };
+        img.onload = () => {
+            console.log('[UI] ✅ Image loaded successfully and displayed');
+        };
+        img.onclick = () => {
+            // Open image in new tab/window for full view
+            window.open(imageUrl, '_blank');
+        };
+        imgContainer.appendChild(img);
+        bubble.appendChild(imgContainer);
+        console.log('[UI] Image element added to bubble');
+    }
+    
+    // Add PDF or video file display
+    if (fileType === 'pdf' || fileType === 'video') {
+        const fileContainer = document.createElement('div');
+        fileContainer.className = 'file-preview-container';
+        fileContainer.style.marginBottom = message ? '8px' : '0';
+        
+        const icon = document.createElement('div');
+        icon.className = 'file-icon';
+        icon.textContent = fileType === 'pdf' ? '📄' : '🎥';
+        
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'file-info';
+        
+        const fileNameEl = document.createElement('div');
+        fileNameEl.className = 'file-name';
+        fileNameEl.textContent = fileName || (fileType === 'pdf' ? 'PDF Document' : 'Video Recording');
+        
+        const fileSizeEl = document.createElement('div');
+        fileSizeEl.className = 'file-type';
+        fileSizeEl.textContent = fileType === 'pdf' ? 'PDF File' : 'Video File';
+        
+        fileInfo.appendChild(fileNameEl);
+        fileInfo.appendChild(fileSizeEl);
+        
+        fileContainer.appendChild(icon);
+        fileContainer.appendChild(fileInfo);
+        bubble.appendChild(fileContainer);
     }
     
     // Add text message if provided
     if (message) {
-        // Format message with line breaks
-        const formattedMessage = message.replace(/\n/g, '<br>');
-        bubble.innerHTML = formattedMessage;
+        const messageContainer = document.createElement('div');
+        // Format message with line breaks and markdown-like formatting
+        let formattedMessage = message.replace(/\n/g, '<br>');
+        // Support for **bold** text
+        formattedMessage = formattedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        messageContainer.innerHTML = formattedMessage;
+        bubble.appendChild(messageContainer);
     }
     
     // Add meta (badge and time)
@@ -324,8 +342,16 @@ function addMessage(message, isUser = false, imageUrl = null) {
     }, 100);
 }
 
-// Show typing indicator
+// Show typing indicator (only one at a time - prevents multiple indicators when batching)
 function showTypingIndicator() {
+    // CRITICAL: Check if typing indicator already exists - don't create duplicate
+    const existingIndicator = document.getElementById('typingIndicator');
+    if (existingIndicator) {
+        // Typing indicator already exists - don't create another one
+        // This prevents multiple typing indicators when messages are batched
+        return;
+    }
+    
     const msgRow = document.createElement('div');
     msgRow.className = 'msg-row bot';
     msgRow.id = 'typingIndicator';
@@ -480,20 +506,51 @@ async function sendMessage() {
             })
         });
         
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            console.error('[Chat] Error parsing response:', parseError);
+            removeTypingIndicator();
+            addMessage('❌ Error: Invalid response from server. Please try again.', false);
+            return;
         }
         
-        const data = await response.json();
-        
-        // Wait a bit before showing response (typing indicator already shown)
-        const thinkingDelay = 1500 + Math.random() * 2000; // 1500-3500ms thinking time
-        
-        setTimeout(() => {
+        // Check for server errors first
+        if (!response.ok || data.error) {
+            console.error('[Chat] Server error:', data);
             removeTypingIndicator();
-            // Display complete message at once
-            addMessageDirect(data.response, false);
-        }, thinkingDelay);
+            const errorMsg = data.error || data.message || 'Server error occurred';
+            addMessage(`❌ ${errorMsg}`, false);
+            return;
+        }
+        
+        // CRITICAL: Server is batching messages (waiting 800ms to collect more)
+        // Keep typing indicator showing until response arrives
+        // Don't remove it here - wait for the actual response
+        if (data.batching === true || (!data.response && !data.message)) {
+            // Server is batching - keep typing indicator showing
+            // The response will come when batching completes
+            console.log('[Chat] Server is batching messages - keeping typing indicator visible');
+            return; // Don't remove typing indicator yet, wait for response
+        }
+        
+        if (data.response || data.message) {
+            const responseText = data.response || data.message;
+            // Wait a bit before showing response (typing indicator already shown)
+            const thinkingDelay = 1500 + Math.random() * 2000; // 1500-3500ms thinking time
+            
+            setTimeout(() => {
+                removeTypingIndicator();
+                // Display complete message at once
+                addMessageDirect(responseText, false);
+            }, thinkingDelay);
+        } else {
+            // No response - error
+            console.error('[Chat] No response in data:', data);
+            removeTypingIndicator();
+            addMessage('❌ Error: No response received from server. Please try again.', false);
+        }
         
     } catch (error) {
         console.error('Error:', error);
@@ -543,8 +600,8 @@ messageInput.addEventListener('paste', async (e) => {
             reader.onload = (event) => {
                 const imageUrl = event.target.result;
                 
-                // Show image in chat
-                addMessage('📷 Image pasted', true, imageUrl);
+                // Show image in chat with preview
+                addMessage('', true, imageUrl, 'image', file.name);
                 
                 // Upload image automatically
                 uploadPastedImage(file);
@@ -610,7 +667,10 @@ async function uploadPastedImage(file) {
             // Build validation message for pasted images (same logic as file upload)
             let validationMessage = '';
             
-            if (data.validation) {
+            // Prioritize server-generated OpenAI message if available
+            if (data.message && typeof data.message === 'string' && data.message.trim()) {
+                validationMessage = data.message;
+            } else if (data.validation) {
                 const val = data.validation;
                 
                 if (val.isSuccessful) {
@@ -704,7 +764,7 @@ if (chatMessages) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const imageUrl = event.target.result;
-                    addMessage('📷 Image pasted', true, imageUrl);
+                    addMessage('', true, imageUrl, 'image', file.name);
                     uploadPastedImage(file);
                 };
                 reader.readAsDataURL(file);
@@ -732,11 +792,14 @@ if (attachBtn && receiptInput) {
     receiptInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) {
-            console.log('No file selected');
+            console.log('[File Upload] No file selected');
             return;
         }
         
-        console.log('File selected:', file.name, file.type, file.size);
+        console.log('[File Upload] File selected:', file.name, file.type, file.size);
+        
+        // Reset input to allow selecting same file again
+        e.target.value = '';
         
         // Validate file type (images, PDFs, videos)
         const isImage = file.type.startsWith('image/');
@@ -759,11 +822,42 @@ if (attachBtn && receiptInput) {
         }
         
         try {
-            // Show upload message with file type indicator
+            // Show file preview immediately in chat
             const fileName = file.name;
-            const fileTypeIcon = isImage ? '📷' : (isPDF ? '📄' : '🎥');
-            const fileTypeName = isImage ? 'receipt' : (isPDF ? 'PDF document' : 'video recording');
-            addMessage(`${fileTypeIcon} Uploading ${fileTypeName}: ${fileName}...`, false);
+            
+            if (isImage) {
+                // Create preview for image
+                console.log('[File Upload] Creating image preview for:', fileName);
+                const reader = new FileReader();
+                reader.onerror = (error) => {
+                    console.error('[File Upload] Error reading image file:', error);
+                    addMessage('❌ Error loading image. Please try again.', true);
+                };
+                reader.onload = (event) => {
+                    try {
+                        const imageUrl = event.target.result;
+                        console.log('[File Upload] Image preview created, URL length:', imageUrl.length);
+                        addMessage('', true, imageUrl, 'image', fileName);
+                        console.log('[File Upload] Image message added to chat');
+                    } catch (error) {
+                        console.error('[File Upload] Error displaying image:', error);
+                        addMessage('❌ Error displaying image. Please try again.', true);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } else if (isPDF) {
+                // Show PDF file preview
+                addMessage('', true, null, 'pdf', fileName);
+            } else if (isVideo) {
+                // Show video file preview with thumbnail if possible
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    // For videos, we can't easily create a thumbnail, so just show file info
+                    addMessage('', true, null, 'video', fileName);
+                };
+                // For now, just show the file info
+                addMessage('', true, null, 'video', fileName);
+            }
             
             // Create form data
             const formData = new FormData();
@@ -778,21 +872,77 @@ if (attachBtn && receiptInput) {
             }
             
             // Upload to server
-            const response = await fetch('/api/upload-receipt', {
-                method: 'POST',
-                body: formData
+            console.log('[File Upload] 🔥 Uploading file to server via FILE ATTACHMENT button...');
+            console.log('[File Upload] File details:', { name: fileName, type: file.type, size: file.size });
+            console.log('[File Upload] FormData contents:', {
+                hasReceipt: formData.has('receipt'),
+                hasUserId: formData.has('userId'),
+                hasOrderNumber: formData.has('orderNumber'),
+                userId: userId
             });
             
-            const data = await response.json();
+            let response;
+            try {
+                response = await fetch('/api/upload-receipt', {
+                    method: 'POST',
+                    body: formData
+                });
+                console.log('[File Upload] ✅ Upload request sent, response status:', response.status);
+            } catch (networkError) {
+                console.error('[File Upload] ❌ Network error:', networkError);
+                addMessage('❌ Network error. Please check your connection and try again.', false);
+                return;
+            }
             
-            console.log('📥📥📥 FULL UPLOAD RESPONSE RECEIVED:', JSON.stringify(data, null, 2));
+            if (!response.ok) {
+                console.error('[File Upload] Upload failed with status:', response.status);
+                let errorMessage = 'Upload failed. Please try again.';
+                try {
+                    const errorData = await response.json();
+                    if (errorData.message) {
+                        errorMessage = `❌ ${errorData.message}`;
+                    } else if (errorData.error) {
+                        errorMessage = `❌ ${errorData.error}`;
+                    }
+                    console.error('[File Upload] Error response:', errorData);
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    console.error('[File Upload] Error response (text):', errorText);
+                    if (errorText) {
+                        errorMessage = `❌ ${errorText.substring(0, 100)}`;
+                    }
+                }
+                addMessage(errorMessage, false);
+                return;
+            }
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                console.error('[File Upload] Error parsing response:', parseError);
+                addMessage('❌ Error processing server response. Please try again.', false);
+                return;
+            }
+            console.log('[File Upload] ✅ Upload response received:', JSON.stringify(data, null, 2));
+            console.log('[File Upload] Response data.message type:', typeof data.message, 'value:', data.message);
             
             if (response.ok && data.success) {
                 console.log('📥 Upload response received:', data);
                 console.log('📥 requiresPDFAndVideo type:', typeof data.requiresPDFAndVideo, 'value:', data.requiresPDFAndVideo);
                 console.log('📥 requiresPDFAndVideo === true?', data.requiresPDFAndVideo === true);
                 console.log('📥 has message:', !!data.message);
-                console.log('📥 message preview:', data.message ? data.message.substring(0, 100) : 'NO MESSAGE');
+                console.log('📥 message type:', typeof data.message);
+                // Safely handle message - it might be a string, object, or undefined
+                if (data.message) {
+                    if (typeof data.message === 'string') {
+                        console.log('📥 message preview:', data.message.substring(0, 100));
+                    } else {
+                        console.log('📥 message (not a string):', data.message);
+                    }
+                } else {
+                    console.log('📥 NO MESSAGE');
+                }
                 console.log('📥 validation:', data.validation);
                 
                 // Check if server returned a direct message (e.g., for 2+ days old receipt)
@@ -812,7 +962,11 @@ if (attachBtn && receiptInput) {
                         removeTypingIndicator();
                         // Display complete message at once
                         console.log('✅ Displaying 2+ days message:', data.message);
-                        addMessageDirect(data.message, false);
+                        // Ensure message is a string before displaying
+                        const messageToDisplay = (data.message && typeof data.message === 'string') 
+                            ? data.message 
+                            : String(data.message || 'Thank you for providing the receipt.');
+                        addMessageDirect(messageToDisplay, false);
                     }, thinkingDelay);
                     
                     console.log('✅ Upload successful (2+ days old):', data);
@@ -828,7 +982,10 @@ if (attachBtn && receiptInput) {
                 const fileType = data.fileType || 'image';
                 const fileTypeName = fileType === 'pdf' ? 'PDF document' : (fileType === 'video' ? 'video recording' : 'receipt');
                 
-                if (data.validation) {
+                // Prioritize server-generated OpenAI message if available
+                if (data.message && typeof data.message === 'string' && data.message.trim()) {
+                    validationMessage = data.message;
+                } else if (data.validation) {
                     const val = data.validation;
                     
                     if (val.isSuccessful) {
@@ -909,15 +1066,35 @@ if (attachBtn && receiptInput) {
                 }, thinkingDelay);
                 
                 console.log('Upload successful:', data);
+                console.log('[File Upload] ✅ Receipt stored in conversation history on server');
             } else {
-                const errorMsg = data.error || 'Unknown error';
+                // Check both 'error' and 'message' fields for error messages
+                const errorMsg = data.message || data.error || 'Unknown error';
                 // Error messages appear instantly
                 addMessage(`❌ Upload failed: ${errorMsg}`, false);
-                console.error('Upload failed:', data);
+                console.error('[File Upload] ❌ Upload failed:', data);
+                console.error('[File Upload] ❌ Receipt NOT stored in conversation history - upload failed');
             }
         } catch (error) {
-            console.error('Upload error:', error);
-            addMessage(`❌ Error uploading receipt: ${error.message}. Please try again.`, false);
+            console.error('[File Upload] Upload error:', error);
+            console.error('[File Upload] Error details:', {
+                message: error?.message,
+                stack: error?.stack,
+                name: error?.name,
+                error: error
+            });
+            // Safely handle error message - error.message might not exist or might not be a string
+            let errorMsg = 'Unknown error occurred';
+            if (error) {
+                if (error.message && typeof error.message === 'string') {
+                    errorMsg = error.message;
+                } else if (typeof error === 'string') {
+                    errorMsg = error;
+                } else {
+                    errorMsg = JSON.stringify(error).substring(0, 100);
+                }
+            }
+            addMessage(`❌ Error uploading receipt: ${errorMsg}. Please try again.`, false);
         }
         
         // Always reset file input
